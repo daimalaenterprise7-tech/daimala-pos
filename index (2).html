@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daimala Sales Entry</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6a64;--ac:#0f6e56;--acx:#fff;--bd:#d9d7cf;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171715;--card:#22221f;--tx:#eeede8;--mut:#a09f97;--ac:#3fb593;--acx:#0b1f19;--bd:#3a3a35;--bad:#f2867f}}
+:root[data-theme="dark"]{--bg:#171715;--card:#22221f;--tx:#eeede8;--mut:#a09f97;--ac:#3fb593;--acx:#0b1f19;--bd:#3a3a35;--bad:#f2867f}
+*{box-sizing:border-box}html{color-scheme:light dark}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px}
+main{max-width:640px;margin:0 auto}h1{font-size:20px;margin:4px 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+input,select,button{font:inherit;width:100%;padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button{background:var(--ac);color:var(--acx);border:0;font-weight:600;margin-top:12px}
+button.sec{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+.mut{color:var(--mut);font-size:13px}.big{font-size:18px;font-weight:600}.bad{color:var(--bad)}
+.s{display:flex;justify-content:space-between;gap:8px;border-top:1px solid var(--bd);padding:8px 0}
+.s button{width:auto;margin:0;padding:4px 10px;background:transparent;color:var(--bad);border:1px solid var(--bd)}
+.btn{display:block;text-align:center;text-decoration:none;background:var(--ac);color:var(--acx);font-weight:600;padding:10px;border-radius:8px;margin-top:12px}.btn.sec{background:transparent;color:var(--tx);border:1px solid var(--bd)}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}td,th{padding:4px 6px;border-top:1px solid var(--bd);text-align:right;white-space:nowrap}td:first-child,th:first-child{text-align:left}
+body.seller .adm,body.seller button[data-o="0"]{display:none!important}
+</style></head><body><main>
+<h1>Daimala Sales Entry</h1>
+<div id="login" class="card" hidden><div class="big">Sign in</div><label>Email</label><input id="em" type="email" autocomplete="username"><label>Password</label><input id="pw" type="password" autocomplete="current-password"><button id="si">Sign in</button><div id="lerr" class="bad"></div></div>
+<div id="msg" class="card mut">Loading…</div>
+<div id="app" hidden>
+<div class="mut"><span id="who"></span> · <a href="#" id="so">Sign out</a></div>
+<div class="card"><label>Today’s rate (SSP per $1)</label>
+<div class="row"><input id="rate" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. enter today’s rate"><button id="saveRate" style="margin:0;flex:0 0 90px">Save</button></div>
+<div class="mut" id="rateInfo"></div></div>
+<div class="card">
+<label>Date</label><input id="date" type="date">
+<label>Item (type a code or name)</label><input id="item" list="items" autocomplete="off" placeholder="e.g. D1-12">
+<datalist id="items"></datalist>
+<div id="stock" class="mut"></div>
+<div class="row"><div><label>Unit</label><select id="unit"><option>Carton</option><option>Dozen</option><option>Piece</option></select></div>
+<div><label>Quantity</label><input id="qty" type="number" inputmode="decimal" min="0" step="any" value="1"></div></div>
+<div class="row"><div><label>Customer pays in</label><select id="ccy"><option>SSP</option><option>USD</option></select></div>
+<div><label>Price charged per unit (<span id="cl">SSP</span>)</label><input id="price" type="number" inputmode="decimal" min="0" step="any"></div></div>
+<div class="mut" id="std"></div>
+<div class="big" id="tot"></div>
+<button id="add">Add to basket</button><div id="err" class="bad"></div></div>
+<div class="card"><div class="big">Basket</div><div id="bk"></div><button id="done" hidden>Complete sale &amp; make receipt</button></div>
+<div class="card" id="rcard" hidden><div class="big">Receipt</div><pre id="rt" style="font:13px/1.25 ui-monospace,Menlo,monospace;white-space:pre;overflow-x:auto"></pre>
+<a id="raw" class="btn" href="#">Print with RawBT</a><a id="rawA" class="btn sec" href="#">Print with RawBT (alternate link)</a><button class="sec" id="sv">Save receipt file (.txt)</button><button class="sec" id="shr">Share / send to printer app</button><button class="sec" id="cpy">Copy receipt text</button><div id="rmsg" class="mut"></div></div>
+<div class="card"><div class="big">Sales entered today</div><div class="mut" id="sum"></div><div id="list"></div>
+<button class="sec" id="exp">Export all sales (CSV)</button><textarea id="out" hidden readonly style="width:100%;height:120px;margin-top:8px"></textarea></div>
+<div class="card adm"><div class="big">Staff (admin)</div><div class="mut">First add the person in Firebase: Authentication, Users, Add user. Then enter the same email here to approve them as a seller.</div><input id="se" type="email" placeholder="seller@email.com"><button id="sa">Approve seller</button><div id="sl"></div><div id="serr" class="bad"></div></div>
+<div class="card adm"><div class="big">Items &amp; prices (admin)</div>
+<label>Discount limit: a reason is required below this (%)</label><div class="row"><input id="dl" type="number" inputmode="decimal" min="0" max="100" step="any"><button id="dls" style="margin:0;flex:0 0 90px">Save</button></div>
+<label>Item: pick one to edit, or type a new code</label><input id="ei" list="items" autocomplete="off"><div id="eh" class="mut"></div>
+<label>Name</label><input id="en"><label>Category</label><input id="ec" list="cats"><datalist id="cats"></datalist>
+<div class="row"><div><label>Pieces per carton</label><input id="eF" type="number" step="any" min="0"></div><div><label>Pieces per dozen</label><input id="eH" type="number" step="any" min="0"></div></div>
+<div class="row"><div><label>Price per carton ($)</label><input id="epn" type="number" step="any" min="0"></div><div><label>Price per dozen ($)</label><input id="epd" type="number" step="any" min="0"></div></div>
+<div class="row"><div><label>Price per piece ($)</label><input id="epp" type="number" step="any" min="0"></div><div><label>Cost per piece ($)</label><input id="ecost" type="number" step="any" min="0"></div></div>
+<label>Reorder level (pieces)</label><input id="erl" type="number" step="any" min="0">
+<button id="es">Save item</button><div id="eerr" class="bad"></div></div>
+<div class="card adm"><div class="big">Stock in / out (admin)</div>
+<label>Item (type a code or name)</label><input id="mi" list="items" autocomplete="off">
+<div id="mh" class="mut"></div>
+<div class="row"><div><label>Type</label><select id="mt"><option value="in">Received (add stock)</option><option value="out">Remove (damaged, lost, other)</option><option value="count">Stock count (set stock to this)</option></select></div>
+<div><label>Unit</label><select id="mu"><option>Carton</option><option>Dozen</option><option>Piece</option></select></div>
+<div><label>Quantity (for a count: the total you counted)</label><input id="mq" type="number" inputmode="decimal" min="0" step="any" value="1"></div></div>
+<label>Note (optional)</label><input id="mn" placeholder="e.g. container 3, or damaged in transit">
+<button id="ms">Save stock entry</button><div id="merr" class="bad"></div>
+<div class="big" style="margin-top:12px">Recent entries</div><div id="ml"></div></div>
+<div class="card adm"><div class="big">Count sheet (admin)</div>
+<div class="mut">Count the shelf and enter what you counted. Leave an item blank if you did not count it. Review shows only the differences. Count while no sales are being made.</div>
+<div class="row"><div><label>Category</label><select id="ccat"></select></div><div><label>Counting in</label><select id="cu"><option>Piece</option><option>Dozen</option><option>Carton</option></select></div></div>
+<input id="cq" placeholder="Search code or name"><div id="cs"></div>
+<button id="cr">Review differences</button><div id="cres"></div><button id="ca" hidden>Apply these adjustments</button><div id="cerr" class="bad"></div></div>
+<div class="card adm"><div class="big">Reorder list (admin)</div>
+<div class="mut" id="lowinfo"></div>
+<div class="row"><div><label>Order enough to cover (days)</label><input id="cd" type="number" min="1" value="30"></div></div>
+<div id="low" style="overflow-x:auto"></div>
+<button class="sec" id="lcsv" hidden>Download reorder list (CSV)</button>
+<button class="sec" id="lfill">Fill empty reorder levels from sales (14 days)</button><div id="lmsg" class="mut"></div></div>
+<div class="card adm"><div class="big">Reports (admin)</div><div class="row"><div><label>From</label><input id="r1" type="date"></div><div><label>To</label><input id="r2" type="date"></div></div><button id="rr">Show report</button><div id="rep" style="overflow-x:auto"></div><button class="sec" id="rcsv" hidden>Download daily report (CSV)</button></div>
+<div class="card adm"><div class="big">Admin: import data</div><div class="mut">catalog.json replaces the item list and sets stock from the file. costs.json adds cost prices for profit reports.</div><input id="imp" type="file" accept=".json,application/json"><div id="impm" class="mut"></div></div>
+</div>
+<script>
+const $=id=>document.getElementById(id),msg=$('msg');
+const firebaseConfig={apiKey:"AIzaSyBTEXkyO8G3xrmlkJdmSB_RNPpZXeILvIc",authDomain:"daimala-sales.firebaseapp.com",projectId:"daimala-sales",storageBucket:"daimala-sales.firebasestorage.app",messagingSenderId:"63248553363",appId:"1:63248553363:web:04161d6ef86a14fa4b4466"};
+firebase.initializeApp(firebaseConfig);
+const auth=firebase.auth(),db=firebase.firestore();
+try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}
+let started=false,me=null;
+$('si').onclick=async()=>{$('lerr').textContent='';try{await auth.signInWithEmailAndPassword($('em').value.trim(),$('pw').value)}catch(e){$('lerr').textContent='Sign-in failed ('+(e.code||'error')+'). Check email and password.'}};
+$('so').onclick=e=>{e.preventDefault();auth.signOut()};
+const OWNER='soroemmanuel199@gmail.com';
+auth.onAuthStateChanged(async u=>{msg.hidden=true;if(!u){$('app').hidden=true;$('login').hidden=false;return}
+ const em=(u.email||'').toLowerCase();let ok=em===OWNER;
+ if(!ok){try{ok=(await db.doc('staff/'+em).get()).exists}catch(e){ok=false}}
+ if(!ok){$('app').hidden=true;$('login').hidden=false;$('lerr').textContent='This account is not approved. Ask the owner to add you.';auth.signOut();return}
+ me={name:em.split('@')[0],uid:u.uid};document.body.classList.toggle('seller',em!==OWNER);
+ $('who').textContent='Signed in as '+u.email+(em===OWNER?' (admin)':' (seller)');$('login').hidden=true;$('app').hidden=false;if(!started){started=true;start()}});
+function saveFile(n,t){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download=n;document.body.appendChild(a);a.click();a.remove()}
+function start(){
+let items={},sales=[],moves=[],rate=0,cur=null,asOf=0,basket=[],txt='',pending=null,touched=false;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const say=t=>{$('rmsg').textContent=t};
+const dayOf=t=>{const d=new Date(t);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+$('date').value=today();
+const f=(n,d=2)=>Number(n).toLocaleString('en',{maximumFractionDigits:d});
+const fac=(it,u)=>u==='Carton'?it.F:u==='Dozen'?it.H:1;
+const stdUsd=(it,u)=>u==='Carton'?it.pcn:u==='Dozen'?it.pd:it.pc;
+function find(){const v=$('item').value.trim().toLowerCase();return items[Object.keys(items).find(c=>c.toLowerCase()===v||(c+' | '+items[c].name).toLowerCase()===v)]||null}
+function sold(code){return sales.filter(s=>s.code===code&&(s.ts||0)>=asOf).reduce((a,s)=>a+s.qty*(s.fac||1),0)+basket.filter(l=>l.code===code).reduce((a,l)=>a+l.qty*l.fac,0)-moves.filter(m=>m.code===code&&(m.ts||0)>=asOf).reduce((a,m)=>a+m.pcs,0)}
+function refresh(){
+ cur=find();const u=$('unit').value,c=$('ccy').value;$('cl').textContent=c;
+ if(!cur){$('stock').textContent='';$('std').textContent='';$('tot').textContent='';return}
+ const left=cur.stock-sold(cur.code);$('stock').textContent='In stock: '+f(left/cur.F,2)+' cartons ('+f(left,0)+' pieces)';
+ const s=stdUsd(cur,u);$('std').textContent='Standard price: $'+f(s,4)+' per '+u.toLowerCase()+(rate?' = SSP '+f(s*rate,0):'');
+ const p=+$('price').value,q=+$('qty').value;
+ if(p&&q){const usd=c==='USD'?p:(rate?p/rate:0);$('tot').textContent='Total: '+f(p*q,c==='USD'?2:0)+' '+c+(c==='SSP'&&rate?'  (≈ $'+f(usd*q)+')':'')}else $('tot').textContent='';
+}
+function autoPrice(force){if(!cur||(touched&&!force))return;const s=stdUsd(cur,$('unit').value);$('price').value=$('ccy').value==='USD'?+s.toFixed(4):(rate?Math.round(s*rate):'');refresh()}
+['item','unit','ccy'].forEach(i=>$(i).addEventListener('input',()=>{touched=false;if(i==='item'&&!find())return refresh();autoPrice(true)}));
+$('price').addEventListener('input',()=>{touched=true;refresh()});$('qty').addEventListener('input',refresh);
+db.doc('catalog/items').onSnapshot(s=>{items={};const dd=s.data()||{};asOf=+dd.asOf||0;(dd.list||[]).forEach(x=>items[x.code]=x);
+ $('items').innerHTML=Object.keys(items).sort().map(c=>'<option value="'+esc(c)+'">'+esc(items[c].name)+'</option>').join('');refresh();drawLow();drawCS()},e=>{msg.hidden=false;msg.textContent='Cannot load data ('+(e.code||'error')+'). Check the Firestore rules and your sign-in.'});
+db.doc('settings/rate').onSnapshot(d=>{const x=d.data();if(x){rate=+x.rate;if(document.activeElement!==$('rate'))$('rate').value=rate;$('rateInfo').textContent='Rate: 1 USD = '+f(rate,2)+' SSP · set by '+(x.by||'?')+' on '+(x.day||'')}autoPrice(false)});
+$('saveRate').onclick=async()=>{const r=+$('rate').value;if(!(r>0))return;if(rate>0&&Math.abs(r-rate)/rate>0.2&&!confirm('This changes the rate by more than 20% (from '+f(rate,2)+' to '+f(r,2)+'). Save it?'))return;try{await db.doc('settings/rate').set({rate:r,by:me.name,day:today()});$('rateInfo').textContent='Rate saved.'}catch(e){$('rateInfo').textContent='Could not save the rate. Check your connection.'}};
+db.collection('sales').onSnapshot(s=>{sales=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);draw();refresh();drawLow()});
+function draw(){
+ const t=today(),ts=sales.filter(s=>s.ts&&dayOf(s.ts)===t);let u=0,l=0;
+ ts.forEach(s=>{u+=s.usd*s.qty;if(s.ccy==='SSP')l+=s.paid*s.qty});
+ $('sum').textContent=ts.length+' lines · $'+f(u)+' total'+(l?' · SSP '+f(l,0)+' received':'');
+ $('list').innerHTML=ts.map(s=>'<div class="s"><div>'+esc(s.code)+' · '+f(s.qty)+' '+esc(s.unit).toLowerCase()+'<div class="mut">'+f(s.paid,s.ccy==='USD'?2:0)+' '+esc(s.ccy)+' each · '+esc(s.by||'')+(s.date!==t?' · dated '+esc(s.date):'')+'</div></div><button data-d="'+esc(s.id)+'" data-o="'+(s.uid===me.uid?1:0)+'">'+(s.uid===me.uid?'Cancel sale':'Delete')+'</button></div>').join('')||'<div class="mut">No sales yet today.</div>';
+}
+$('list').onclick=async e=>{const id=e.target.dataset.d;if(!id||!confirm('Delete this sale?'))return;const s=sales.find(x=>x.id===id);try{if(s){const {id:_i,...rest}=s;await db.doc('deleted/'+id).set({...rest,deletedBy:me.name,deletedAt:Date.now()})}await db.doc('sales/'+id).delete()}catch(x){$('err').textContent='Could not delete. Try again.'}};
+$('add').onclick=async()=>{
+ const err=$('err');err.textContent='';const c=$('ccy').value,p=+$('price').value,q=+$('qty').value,u=$('unit').value;
+ if(!cur)return err.textContent='Pick an item from the list.';
+ if(!(q>0&&p>0))return err.textContent='Enter quantity and price charged.';
+ if(c==='SSP'&&!rate)return err.textContent='Save today’s rate first.';
+ const left=cur.stock-sold(cur.code),need=q*fac(cur,u);
+ if(need>left&&!confirm('Only '+f(left,0)+' pieces in stock. Add anyway?'))return;
+ const usd=c==='USD'?p:p/rate,std=stdUsd(cur,u);let why='';
+ if(std>0&&usd<std*0.99){const pc=(1-usd/std)*100;if(pc>disc){why=(prompt('This price is '+f(pc,1)+'% below the standard price (limit '+disc+'%). Enter the reason for the discount:')||'').trim();if(!why)return err.textContent='A reason is needed for a discount above '+disc+'%.'}}
+ resetPending();basket.push({code:cur.code,name:cur.name,unit:u,qty:q,fac:fac(cur,u),ccy:c,paid:p,usd:+usd.toFixed(4),rate:rate,std:std,why:why});drawBasket();
+ $('item').value='';cur=null;$('qty').value=1;$('price').value='';refresh();$('item').focus();
+};
+function drawBasket(){$('bk').innerHTML=basket.map((l,i)=>'<div class="s"><div>'+esc(l.code)+' · '+f(l.qty)+' '+esc(l.unit).toLowerCase()+'<div class="mut">'+f(l.paid,l.ccy==='USD'?2:0)+' '+esc(l.ccy)+' each</div></div><button data-r="'+i+'">Remove</button></div>').join('')||'<div class="mut">Basket is empty.</div>';$('done').hidden=!basket.length;if(cur)refresh()}
+$('bk').onclick=e=>{const i=e.target.dataset.r;if(i!==undefined){resetPending();basket.splice(+i,1);drawBasket()}};
+function rtext(no,d,L){const W=32,line='-'.repeat(W),A=s=>String(s).normalize('NFKD').replace(/[^\x20-\x7e]/g,''),c=t=>' '.repeat(Math.max(0,(W-t.length)>>1))+t,r2=(a,b)=>{a=A(a);b=A(b);return a+' '.repeat(Math.max(1,W-a.length-b.length))+b};
+ const o=[c('DAIMALA ENTERPRISE'),c('Konyo-Konyo, Juba'),c('+211925252434'),c('+211925208814'),line,r2('Receipt '+no,d),A('Seller: '+(me.name)),line];let u=0,s=0;
+ L.forEach(l=>{o.push(A(l.name).slice(0,W));const t=l.paid*l.qty,k=l.ccy==='USD'?2:0;if(l.ccy==='USD')u+=t;else s+=t;o.push(r2(f(l.qty)+' '+l.unit.toLowerCase()+' x '+f(l.paid,k),f(t,k)+' '+l.ccy))});
+ o.push(line);if(u)o.push(r2('TOTAL USD',f(u)));if(s)o.push(r2('TOTAL SSP',f(s,0)));o.push(line,c('Thank you for shopping with us'),'','','');return o.join('\n')}
+function newNo(d){const n=new Date(),p=x=>String(x).padStart(2,'0');return d.slice(2).replace(/-/g,'')+'-'+p(n.getHours())+p(n.getMinutes())+p(n.getSeconds())+Math.random().toString(36).slice(2,4).toUpperCase()}
+function resetPending(){if(pending){pending.ids.forEach(id=>db.doc('sales/'+id).delete().catch(()=>{}));pending=null}}
+$('done').onclick=async()=>{if(!basket.length)return;$('done').disabled=true;$('err').textContent='';
+ const d=$('date').value||today();
+ if(!pending||pending.d!==d){const no=newNo(d);pending={no,d,ts:Date.now(),ids:basket.map((_,i)=>no+'_'+i)}}
+ const L=basket.slice(),P=pending;
+ try{L.forEach((l,i)=>db.doc('sales/'+P.ids[i]).set({...l,date:d,rcpt:P.no,by:me.name,uid:me.uid,ts:P.ts+i}).catch(()=>{$('err').textContent='A sale line was rejected by the server. Check sign-in and rules.'}));
+  basket=[];pending=null;drawBasket();txt=rtext(P.no,d,L);
+  const b=btoa(txt);$('raw').href='rawbt:base64,'+b;$('rawA').href='intent:base64,'+b+'#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+  say('If the RawBT buttons do nothing, tap Save receipt file or Copy receipt text, then print from the RawBT app.');$('rt').textContent=txt;$('rcard').hidden=false;$('rcard').scrollIntoView()}
+ catch(e){$('err').textContent='Could not save the whole sale. Nothing was duplicated: tap Complete again to retry.'}
+ $('done').disabled=false};
+const copy=async()=>{try{await navigator.clipboard.writeText(txt);say('Receipt text copied.')}catch(e){const r=document.createRange();r.selectNodeContents($('rt'));const g=getSelection();g.removeAllRanges();g.addRange(r);say('Copy not allowed here. Receipt text is selected: long-press and Copy.')}};
+$('shr').onclick=async()=>{if(navigator.share){try{await navigator.share({title:'Receipt',text:txt});say('')}catch(e){if(e&&e.name!=='AbortError')say('Sharing is not available here.')}}else{say('Sharing not supported on this device.');copy()}};
+$('cpy').onclick=copy;
+$('sv').onclick=async()=>{try{saveFile('receipt_'+Date.now()+'.txt',txt);say('Receipt file saved. Open it with RawBT to print.')}catch(e){say('Saving failed. Use Copy receipt text.')}};
+['raw','rawA'].forEach(id=>$(id).addEventListener('click',()=>{say('Opening RawBT… If nothing happens, install RawBT, or use Share and pick RawBT.')}));
+drawBasket();
+$('exp').onclick=async()=>{
+ const q=v=>'"'+String(v).replace(/"/g,'""')+'"';
+ const rows=[['Date','Receipt','Item','Unit','Qty','Price charged (USD per unit)','Payment','Note','Seller']];
+ sales.slice().sort((a,b)=>a.ts-b.ts).forEach(s=>rows.push([s.date,s.rcpt||'',s.code+' | '+s.name,s.unit,s.qty,s.usd,s.ccy,s.ccy==='SSP'?'SSP '+f(s.paid,0)+' each at '+f(s.rate,2):'',s.by||'']));
+ const csv=rows.map(r=>r.map(q).join(',')).join('\n');
+ try{saveFile('daimala_sales_'+today()+'.csv',csv);return}catch(e){}
+ $('out').hidden=false;$('out').value=csv;$('out').select();
+};
+db.collection('staff').onSnapshot(q=>{$('sl').innerHTML=q.docs.map(d=>'<div class="s"><div>'+esc(d.id)+'</div><button data-st="'+esc(d.id)+'">Remove</button></div>').join('')||'<div class="mut">No sellers yet.</div>'},()=>{});
+$('sa').onclick=()=>{const v=$('se').value.trim().toLowerCase(),e=$('serr');if(!/^\S+@\S+\.\S+$/.test(v))return e.textContent='Enter a valid email.';e.textContent='';db.doc('staff/'+v).set({role:'seller',by:me.name,ts:Date.now()}).then(()=>{$('se').value=''}).catch(()=>{e.textContent='Could not save.'})};
+$('sl').onclick=e=>{const id=e.target.dataset.st;if(id&&confirm('Remove '+id+'? They will no longer be able to use the app.'))db.doc('staff/'+id).delete().catch(()=>{$('serr').textContent='Could not remove.'})};
+let disc=10;
+db.doc('settings/limits').onSnapshot(d=>{const x=d.data();if(x&&x.disc>=0)disc=+x.disc;if(document.activeElement!==$('dl'))$('dl').value=disc},()=>{});
+$('dls').onclick=()=>{const v=+$('dl').value,e=$('eerr');if(!(v>=0&&v<=100))return e.textContent='Enter a percentage from 0 to 100.';e.textContent='';db.doc('settings/limits').set({disc:v,by:me.name}).catch(()=>{e.textContent='Could not save.'})};
+const EF=['en','ec','eF','eH','epn','epd','epp','ecost','erl'];
+function efind(){const v=$('ei').value.trim().toLowerCase();return Object.keys(items).find(c=>c.toLowerCase()===v)}
+$('ei').addEventListener('input',()=>{const c=efind(),it=c&&items[c],k=c&&costs[c];EF.forEach(i=>$(i).value='');
+ if(it){$('en').value=it.name;$('eF').value=it.F;$('eH').value=it.H;$('epn').value=it.pcn;$('epd').value=it.pd;$('epp').value=it.pc;$('ecost').value=k&&k.c>=0?k.c:'';$('ec').value=k&&k.cat||'';$('erl').value=k&&k.rl!=null?k.rl:'';$('eh').textContent='Editing '+c+'. Change stock in Stock in / out, not here.'}
+ else $('eh').textContent=$('ei').value.trim()?'New item. It starts with 0 stock; add stock in Stock in / out.':''});
+$('epp').addEventListener('input',()=>{const p=+$('epp').value,H=+$('eH').value,F=+$('eF').value;if(!$('epd').value&&H)$('epd').value=+(p*H).toFixed(4);if(!$('epn').value&&F)$('epn').value=+(p*F).toFixed(4)});
+$('es').onclick=async()=>{const e=$('eerr');e.textContent='';
+ const ex=efind(),code=ex||$('ei').value.trim(),n=$('en').value.trim(),F=+$('eF').value,H=+$('eH').value,pn=+$('epn').value,pd=+$('epd').value,pp=+$('epp').value,cs=$('ecost').value===''?null:+$('ecost').value,rl=$('erl').value===''?0:+$('erl').value;
+ if(!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(code))return e.textContent='Code: letters, numbers, dot and dash only, no spaces.';
+ if(!n||!(F>0)||!(H>0)||!(pn>=0)||!(pd>=0)||!(pp>0))return e.textContent='Fill in the name, pieces per carton, pieces per dozen and the three prices.';
+ if(cs===null&&!(costs[code]&&costs[code].c>=0))return e.textContent='Enter the cost per piece.';
+ try{await db.runTransaction(async t=>{const r=db.doc('catalog/items'),d=await t.get(r),x=d.exists?d.data():{asOf:Date.now(),list:[]},l=(x.list||[]).slice(),i=l.findIndex(z=>z.code===code),o={code,name:n,F,H,pcn:pn,pd,pc:pp,stock:i>=0?l[i].stock:0};if(i>=0)l[i]=o;else l.push(o);t.set(r,{asOf:x.asOf,list:l})});
+  const k={cat:$('ec').value.trim()||'Other',rl};if(cs!==null)k.c=cs;
+  await db.doc('costs/items').set({costs:{[code]:k}},{merge:true});
+  ['ei',...EF].forEach(i=>$(i).value='');$('eh').textContent='Saved '+code+'.'}catch(x){e.textContent='Could not save. Check your connection and try again.'}};
+let cvals={},cpend=[],lowRows=[];
+const isSel=()=>document.body.classList.contains('seller');
+function drawCS(){if(isSel()||$('cs').contains(document.activeElement))return;
+ const cats=['All',...new Set(Object.values(items).map(it=>(costs[it.code]&&costs[it.code].cat)||'Other'))].sort((a,b)=>a==='All'?-1:b==='All'?1:a.localeCompare(b)),sel=$('ccat').value||'All';
+ if($('ccat').options.length!==cats.length)$('ccat').innerHTML=cats.map(c=>'<option'+(c===sel?' selected':'')+'>'+esc(c)+'</option>').join('');
+ const q=$('cq').value.trim().toLowerCase(),cu=$('cu').value,cat=$('ccat').value||'All';
+ $('cs').innerHTML=Object.values(items).filter(it=>(cat==='All'||((costs[it.code]&&costs[it.code].cat)||'Other')===cat)&&(!q||(it.code+' '+it.name).toLowerCase().includes(q))).sort((a,b)=>a.code.localeCompare(b.code,undefined,{numeric:true})).slice(0,60).map(it=>{const left=it.stock-sold(it.code);return '<div class="s"><div>'+esc(it.code)+' · '+esc(it.name)+'<div class="mut">System: '+f(left/fac(it,cu),2)+' '+cu.toLowerCase()+'</div></div><input data-c="'+esc(it.code)+'" type="number" inputmode="decimal" min="0" step="any" style="width:90px" value="'+esc(cvals[it.code]||'')+'"></div>'}).join('')||'<div class="mut">No items.</div>'}
+$('cs').addEventListener('input',e=>{const c=e.target.dataset.c;if(c)cvals[c]=e.target.value});
+['ccat','cu'].forEach(i=>$(i).addEventListener('change',()=>{$('cres').innerHTML='';$('ca').hidden=true;drawCS()}));$('cq').addEventListener('input',drawCS);
+$('cr').onclick=()=>{cpend=[];let tv=0;const cu=$('cu').value,rows=[];
+ Object.keys(cvals).forEach(c=>{const it=items[c];if(!it||cvals[c]===''||!(+cvals[c]>=0))return;const sys=it.stock-sold(c),cnt=+cvals[c]*fac(it,cu),d=cnt-sys;if(Math.abs(d)<1e-9)return;const k=costs[c];if(k&&k.c>=0)tv+=d*k.c;cpend.push({it,sys,cnt,d});rows.push('<tr><td>'+esc(c)+'</td><td>'+f(sys,0)+'</td><td>'+f(cnt,0)+'</td><td>'+(d>0?'+':'')+f(d,0)+'</td></tr>')});
+ const n=Object.keys(cvals).filter(c=>cvals[c]!=='').length;
+ $('cres').innerHTML=cpend.length?'<table><tr><th>Item</th><th>System</th><th>Counted</th><th>Diff</th></tr>'+rows.join('')+'</table><div class="mut">'+cpend.length+' of '+n+' counted items differ. Net value at cost: $'+f(tv)+' (pieces).</div>':'<div class="mut">'+(n?'All '+n+' counted items match the system.':'Enter some counts first.')+'</div>';
+ $('ca').hidden=!cpend.length;$('cerr').textContent=''};
+$('ca').onclick=()=>{if(!cpend.length||!confirm('Adjust stock for '+cpend.length+' items to match your counts?'))return;$('ca').disabled=true;
+ const b=db.batch(),now=Date.now(),day=today();
+ cpend.forEach((x,i)=>b.set(db.doc('stockin/mc'+now+'_'+i),{code:x.it.code,name:x.it.name,type:'count',unit:'Piece',qty:Math.abs(x.d),pcs:x.d,system:x.sys,counted:x.cnt,note:'Count sheet',date:day,by:me.name,ts:now+i}));
+ const n=cpend.length;b.commit().then(()=>{cvals={};cpend=[];$('cres').innerHTML='<div class="mut">Applied '+n+' adjustments.</div>';$('ca').hidden=true;$('ca').disabled=false;drawCS()}).catch(()=>{$('cerr').textContent='Could not save the counts. Check your connection and try again.';$('ca').disabled=false})};
+function lowInfo(){const now=Date.now(),mt=sales.reduce((m,x)=>Math.min(m,x.ts||now),now),span=Math.max(7,Math.min(30,Math.ceil((now-mt)/864e5))),from=now-span*864e5,v={};sales.forEach(x=>{if(x.ts>=from)v[x.code]=(v[x.code]||0)+x.qty*(x.fac||1)});return{span,v}}
+function drawLow(){if(isSel())return;const {span,v}=lowInfo(),cov=+$('cd').value||30;lowRows=[];
+ Object.values(items).forEach(it=>{const left=it.stock-sold(it.code),k=costs[it.code]||{},rl=+k.rl||0,vel=(v[it.code]||0)/span,days=vel>0?left/vel:Infinity;
+  if((rl>0&&left<=rl)||days<14){const need=Math.max(0,Math.ceil(vel*cov-left));lowRows.push({it,left,rl,days,ct:need?Math.ceil(need/it.F):0})}});
+ lowRows.sort((a,b)=>a.days-b.days);
+ $('lowinfo').textContent=lowRows.length+' items are at or below their reorder level, or will run out within 14 days. Selling speed is taken from the last '+span+' days of sales.';
+ $('low').innerHTML=lowRows.length?'<table><tr><th>Item</th><th>Stock</th><th>Level</th><th>Days left</th><th>Order (cartons)</th></tr>'+lowRows.slice(0,40).map(x=>'<tr><td>'+esc(x.it.code)+' '+esc(x.it.name)+'</td><td>'+f(x.left,0)+'</td><td>'+(x.rl?f(x.rl,0):'-')+'</td><td>'+(isFinite(x.days)?f(x.days,0):'-')+'</td><td>'+(x.ct||'-')+'</td></tr>').join('')+'</table>':'<div class="mut">Nothing is low right now.</div>';
+ $('lcsv').hidden=!lowRows.length}
+$('cd').addEventListener('input',drawLow);
+$('lcsv').onclick=()=>saveFile('daimala_reorder_'+today()+'.csv',[['Code','Name','Stock pieces','Reorder level','Days left','Order cartons']].concat(lowRows.map(x=>[x.it.code,'"'+x.it.name.replace(/"/g,'""')+'"',x.left.toFixed(0),x.rl,isFinite(x.days)?x.days.toFixed(0):'',x.ct])).map(r=>r.join(',')).join('\n'));
+$('lfill').onclick=()=>{const {span,v}=lowInfo(),o={};Object.values(items).forEach(it=>{const k=costs[it.code]||{};if(!(+k.rl>0)&&v[it.code]>0)o[it.code]={rl:Math.ceil(v[it.code]/span*14)}});const n=Object.keys(o).length;
+ if(!n){$('lmsg').textContent='No items need a level filled in.';return}
+ if(!confirm('Set reorder levels for '+n+' items that have none, using two weeks of their recent selling speed?'))return;
+ db.doc('costs/items').set({costs:o},{merge:true}).then(()=>{$('lmsg').textContent='Set levels for '+n+' items.'}).catch(()=>{$('lmsg').textContent='Could not save.'})};
+const mfind=()=>{const v=$('mi').value.trim().toLowerCase();return items[Object.keys(items).find(c=>c.toLowerCase()===v||(c+' | '+items[c].name).toLowerCase()===v)]||null};
+function mhint(){const it=mfind();$('mh').textContent=it?'In stock: '+f((it.stock-sold(it.code))/it.F,2)+' cartons ('+f(it.stock-sold(it.code),0)+' pieces)':''}
+$('mi').addEventListener('input',mhint);
+db.collection('stockin').onSnapshot(q=>{moves=q.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);drawMoves();refresh();mhint();drawLow()});
+function drawMoves(){$('ml').innerHTML=moves.slice(0,8).map(m=>'<div class="s"><div>'+esc(m.code)+' · '+(m.pcs>0?'+':'−')+f(m.qty)+' '+esc(m.unit).toLowerCase()+' ('+(m.pcs>0?'+':'')+f(m.pcs,0)+' pcs)<div class="mut">'+(m.type==='in'?'Received':m.type==='count'?'Count: system '+f(m.system,0)+', counted '+f(m.counted,0):'Removed')+' · '+esc(m.date)+' · '+esc(m.by||'')+(m.note?' · '+esc(m.note):'')+'</div></div><button data-m="'+esc(m.id)+'">Delete</button></div>').join('')||'<div class="mut">No entries yet.</div>'}
+$('ml').onclick=e=>{const id=e.target.dataset.m;if(!id||!confirm('Delete this stock entry? Stock goes back to what it was before it.'))return;db.doc('stockin/'+id).delete().catch(()=>{$('merr').textContent='Could not delete. Try again.'})};
+$('ms').onclick=()=>{const it=mfind(),q=+$('mq').value,u=$('mu').value,t=$('mt').value,e=$('merr');e.textContent='';
+ if(!it)return e.textContent='Pick an item from the list.';
+ if(t==='count'?($('mq').value===''||q<0):!(q>0))return e.textContent='Enter a quantity.';
+ const need=q*fac(it,u),sys=it.stock-sold(it.code),id='m'+Date.now()+Math.random().toString(36).slice(2,5);
+ const rec={code:it.code,name:it.name,type:t,note:$('mn').value.trim(),date:today(),by:me.name,ts:Date.now()};
+ if(t==='count'){const d=need-sys;if(Math.abs(d)<1e-9){e.textContent='The count matches the system. No change needed.';return}
+  if(!confirm('System says '+f(sys,0)+' pieces and you counted '+f(need,0)+'. Adjust stock by '+(d>0?'+':'')+f(d,0)+' pieces?'))return;
+  Object.assign(rec,{unit:'Piece',qty:Math.abs(d),pcs:d,system:sys,counted:need})}
+ else{if(t==='out'&&need>sys&&!confirm('That is more than the '+f(sys,0)+' pieces in stock. Save anyway?'))return;Object.assign(rec,{unit:u,qty:q,pcs:t==='in'?need:-need})}
+ db.doc('stockin/'+id).set(rec).catch(()=>{e.textContent='Rejected by the server. Check sign-in and rules.'});
+ $('mi').value='';$('mq').value=1;$('mn').value='';$('mh').textContent='Saved.'};
+drawMoves();
+let costs={},csvRows=[];
+db.doc('costs/items').onSnapshot(d=>{costs=(d.data()||{}).costs||{};$('cats').innerHTML=[...new Set(Object.values(costs).map(k=>k.cat).filter(Boolean))].sort().map(c=>'<option value="'+esc(c)+'">').join('');drawLow();drawCS()},()=>{});
+$('r1').value=today().slice(0,8)+'01';$('r2').value=today();
+const D=n=>'$'+f(n,2);
+$('rr').onclick=()=>{
+ const a=$('r1').value,b=$('r2').value,days={};let nc=0;
+ sales.filter(s=>s.date>=a&&s.date<=b).forEach(s=>{
+  const d=days[s.date]||(days[s.date]={n:0,s:0,p:0,l:0}),rev=s.usd*s.qty,c=costs[s.code];
+  d.n++;d.s+=rev;if(s.ccy==='SSP')d.l+=s.paid*s.qty;
+  if(c&&c.c>=0)d.p+=rev-c.c*s.qty*(s.fac||1);else nc++});
+ const ks=Object.keys(days).sort(),T=ks.reduce((t,k)=>({n:t.n+days[k].n,s:t.s+days[k].s,p:t.p+days[k].p,l:t.l+days[k].l}),{n:0,s:0,p:0,l:0});
+ csvRows=[['Date','Lines','Sales USD','Profit USD','SSP received']].concat(ks.map(k=>[k,days[k].n,days[k].s.toFixed(2),days[k].p.toFixed(2),days[k].l.toFixed(0)]),[['Total',T.n,T.s.toFixed(2),T.p.toFixed(2),T.l.toFixed(0)]]);
+ let vc=0,vs=0;const cat={};
+ Object.values(items).forEach(it=>{const left=Math.max(0,it.stock-sold(it.code)),c=costs[it.code],cv=c&&c.c>=0?left*c.c:0,sv=left*it.pc,k=(c&&c.cat)||'Other';vc+=cv;vs+=sv;const o=cat[k]||(cat[k]={c:0,s:0});o.c+=cv;o.s+=sv});
+ const hasC=Object.keys(costs).length>0,m=T.s?T.p/T.s*100:0;
+ $('rep').innerHTML='<table><tr><th>Date</th><th>Lines</th><th>Sales</th><th>Profit</th><th>SSP in</th></tr>'+ks.map(k=>'<tr><td>'+esc(k)+'</td><td>'+days[k].n+'</td><td>'+D(days[k].s)+'</td><td>'+(hasC?D(days[k].p):'-')+'</td><td>'+f(days[k].l,0)+'</td></tr>').join('')+'<tr><th>Total</th><th>'+T.n+'</th><th>'+D(T.s)+'</th><th>'+(hasC?D(T.p):'-')+'</th><th>'+f(T.l,0)+'</th></tr></table>'
+ +'<div class="mut">'+(hasC?'Profit margin '+f(m,1)+'%.':'No cost data yet: import costs.json to see profit.')+(nc&&hasC?' '+nc+' sale lines have no cost and are left out of profit.':'')+' Sales are USD value at the rate used.</div>'
+ +'<div class="big" style="margin-top:12px">Stock value now</div><table><tr><th>Category</th><th>At cost</th><th>At selling</th></tr>'+Object.keys(cat).sort().map(k=>'<tr><td>'+esc(k)+'</td><td>'+(hasC?D(cat[k].c):'-')+'</td><td>'+D(cat[k].s)+'</td></tr>').join('')+'<tr><th>Total</th><th>'+(hasC?D(vc):'-')+'</th><th>'+D(vs)+'</th></tr></table>'
+ +'<div class="mut">Selling value uses the per-piece standard price. Stock is the imported stock minus sales since the import.</div>';
+ const bl=sales.filter(x=>x.date>=a&&x.date<=b&&x.std&&x.usd<x.std*0.99).sort((x,y)=>(y.std-y.usd)*y.qty-(x.std-x.usd)*x.qty);let lost=0;const bs={};
+ bl.forEach(x=>{const l=(x.std-x.usd)*x.qty;lost+=l;bs[x.by||'?']=(bs[x.by||'?']||0)+l});
+ const cn=moves.filter(x=>x.type==='count'&&x.date>=a&&x.date<=b);let cvv=0;cn.forEach(x=>{const k=costs[x.code];if(k&&k.c>=0)cvv+=x.pcs*k.c});
+ $('rep').innerHTML+='<div class="big" style="margin-top:12px">Sold below standard price</div>'+(bl.length?'<div class="mut">'+bl.length+' lines, $'+f(lost)+' below standard. By seller: '+Object.keys(bs).map(k=>esc(k)+' $'+f(bs[k])).join(', ')+'</div><table><tr><th>Date</th><th>Seller</th><th>Item</th><th>Qty</th><th>Charged</th><th>Standard</th><th>Lost</th><th>Reason</th></tr>'+bl.slice(0,20).map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.by||'')+'</td><td>'+esc(x.code)+'</td><td>'+f(x.qty)+' '+esc(x.unit).toLowerCase()+'</td><td>$'+f(x.usd,2)+'</td><td>$'+f(x.std,2)+'</td><td>$'+f((x.std-x.usd)*x.qty)+'</td><td>'+esc(x.why||'')+'</td></tr>').join('')+'</table>'+(bl.length>20?'<div class="mut">Showing the 20 biggest.</div>':''):'<div class="mut">None in this period.</div>')
+ +'<div class="big" style="margin-top:12px">Stock count differences</div>'+(cn.length?'<table><tr><th>Date</th><th>Item</th><th>System</th><th>Counted</th><th>Diff</th></tr>'+cn.map(x=>'<tr><td>'+esc(x.date)+'</td><td>'+esc(x.code)+'</td><td>'+f(x.system,0)+'</td><td>'+f(x.counted,0)+'</td><td>'+(x.pcs>0?'+':'')+f(x.pcs,0)+'</td></tr>').join('')+'</table><div class="mut">Net value of differences at cost: $'+f(cvv)+' (negative means stock was missing).</div>':'<div class="mut">No stock counts in this period.</div>');
+ $('rcsv').hidden=!ks.length};
+$('rcsv').onclick=()=>saveFile('daimala_report_'+$('r1').value+'_to_'+$('r2').value+'.csv',csvRows.map(r=>r.join(',')).join('\n'));
+$('imp').onchange=async e=>{const fl=e.target.files[0];if(!fl)return;try{const j=JSON.parse(await fl.text());if(j.costs&&typeof j.costs==='object'){await db.doc('costs/items').set({costs:j.costs});$('impm').textContent='Imported cost data for '+Object.keys(j.costs).length+' items.';e.target.value='';return}if(!Array.isArray(j.list)||!j.list.length)throw 0;if(!confirm('Replace the item list with '+j.list.length+' items?'))return;await db.doc('catalog/items').set({asOf:Date.now(),list:j.list});$('impm').textContent='Imported '+j.list.length+' items.'}catch(x){$('impm').textContent='That file could not be imported.'}e.target.value=''};
+}
+</script></main></body></html>
