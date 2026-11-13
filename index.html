@@ -80,9 +80,10 @@ tr:nth-child(even) td{background:rgba(0,0,0,.025)}
 <div data-t="sell" class="card"><div class="big">Basket</div><div id="bk"></div><button id="done" hidden>Complete sale &amp; make receipt</button></div>
 <div data-t="sell" class="card" id="rcard" hidden><div class="big">Receipt</div><pre id="rt" style="font:13px/1.25 ui-monospace,Menlo,monospace;white-space:pre;overflow-x:auto"></pre>
 <a id="raw" class="btn" href="#">Print with RawBT</a><a id="rawA" class="btn sec" href="#">Print with RawBT (alternate link)</a><button class="sec" id="sv">Save receipt file (.txt)</button><button class="sec" id="shr">Share / send to printer app</button><button class="sec" id="cpy">Copy receipt text</button><div id="rmsg" class="mut"></div></div>
+<div data-t="today" class="card"><div class="big">Reprint a receipt</div><div class="row"><input id="pn" placeholder="Receipt no., e.g. 261113-001" autocapitalize="characters"><button id="pf" style="margin:0;flex:0 0 90px">Find</button></div><div id="pm" class="mut"></div><div class="mut" style="margin-top:8px">Today’s receipts</div><div id="pl"></div></div>
 <div data-t="today" class="card"><div class="big">Sales entered today</div><div class="mut" id="sum"></div><div id="list"></div>
 <button class="sec" id="exp">Export all sales (CSV)</button><textarea id="out" hidden readonly style="width:100%;height:120px;margin-top:8px"></textarea></div>
-<div data-t="set" class="card adm fold open"><div class="big">Staff (admin)</div><div class="mut">First add the person in Firebase: Authentication, Users, Add user. Then enter the same email here to approve them as a seller.</div><input id="se" type="email" placeholder="seller@email.com"><button id="sa">Approve seller</button><div id="sl"></div><div id="serr" class="bad"></div></div>
+<div data-t="set" class="card adm fold open"><div class="big">Staff (admin)</div><div class="mut">First add the person in Firebase: Authentication, Users, Add user. Then enter the same email here to approve them as a seller.</div><input id="se" type="email" placeholder="seller@email.com"><input id="sn" placeholder="Name on receipts, e.g. Grace" style="margin-top:8px"><button id="sa">Approve seller</button><div id="sl"></div><div id="serr" class="bad"></div></div>
 <div data-t="stock" class="card adm fold"><div class="big">Items &amp; prices (admin)</div>
 <label>Discount limit: a reason is required below this (%)</label><div class="row"><input id="dl" type="number" inputmode="decimal" min="0" max="100" step="any"><button id="dls" style="margin:0;flex:0 0 90px">Save</button></div>
 <label>Item: pick one to edit, or type a new code</label><input id="ei" list="items" autocomplete="off"><div id="eh" class="mut"></div>
@@ -130,11 +131,11 @@ $('si').onclick=async()=>{$('lerr').textContent='';try{await auth.signInWithEmai
 $('so').onclick=e=>{e.preventDefault();auth.signOut()};
 const OWNER='soroemmanuel199@gmail.com';
 auth.onAuthStateChanged(async u=>{msg.hidden=true;if(!u){$('app').hidden=true;$('login').hidden=false;return}
- const em=(u.email||'').toLowerCase();let ok=em===OWNER;
- if(!ok){try{ok=(await db.doc('staff/'+em).get()).exists}catch(e){ok=false}}
+ const em=(u.email||'').toLowerCase();let ok=em===OWNER,nm=em===OWNER?'Emmanuel':'';
+ if(!ok){try{const sd=await db.doc('staff/'+em).get();ok=sd.exists;nm=(sd.data()||{}).name||''}catch(e){ok=false}}
  if(!ok){$('app').hidden=true;$('login').hidden=false;$('lerr').textContent='This account is not approved. Ask the owner to add you.';auth.signOut();return}
- me={name:em.split('@')[0],uid:u.uid};document.body.classList.toggle('seller',em!==OWNER);
- $('who').textContent='Signed in as '+u.email+(em===OWNER?' (admin)':' (seller)');$('login').hidden=true;$('app').hidden=false;showTab('sell');if(!started){started=true;start()}});
+ me={name:em.split('@')[0],uid:u.uid,label:nm||em.split('@')[0].replace(/^./,c=>c.toUpperCase())};document.body.classList.toggle('seller',em!==OWNER);
+ $('who').textContent='Signed in as '+me.label+' ('+u.email+')'+(em===OWNER?' (admin)':' (seller)');$('login').hidden=true;$('app').hidden=false;showTab('sell');if(!started){started=true;start()}});
 function saveFile(n,t){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download=n;document.body.appendChild(a);a.click();a.remove()}
 function start(){
 let items={},sales=[],moves=[],rate=0,cur=null,asOf=0,basket=[],txt='',pending=null,touched=false;
@@ -163,7 +164,7 @@ db.doc('catalog/items').onSnapshot(s=>{items={};const dd=s.data()||{};asOf=+dd.a
  $('items').innerHTML=Object.keys(items).sort().map(c=>'<option value="'+esc(c)+'">'+esc(items[c].name)+'</option>').join('');refresh();drawLow();drawCS()},e=>{msg.hidden=false;msg.textContent='Cannot load data ('+(e.code||'error')+'). Check the Firestore rules and your sign-in.'});
 db.doc('settings/rate').onSnapshot(d=>{const x=d.data();if(x){rate=+x.rate;if(document.activeElement!==$('rate'))$('rate').value=rate;$('rateInfo').textContent='Rate: 1 USD = '+f(rate,2)+' SSP · set by '+(x.by||'?')+' on '+(x.day||'')}autoPrice(false)});
 $('saveRate').onclick=async()=>{const r=+$('rate').value;if(!(r>0))return;if(rate>0&&Math.abs(r-rate)/rate>0.2&&!confirm('This changes the rate by more than 20% (from '+f(rate,2)+' to '+f(r,2)+'). Save it?'))return;try{await db.doc('settings/rate').set({rate:r,by:me.name,day:today()});$('rateInfo').textContent='Rate saved.'}catch(e){$('rateInfo').textContent='Could not save the rate. Check your connection.'}};
-db.collection('sales').onSnapshot(s=>{sales=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);draw();refresh();drawLow()});
+db.collection('sales').onSnapshot(s=>{sales=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>b.ts-a.ts);draw();refresh();drawLow();drawPl()});
 function draw(){
  const t=today(),ts=sales.filter(s=>s.ts&&dayOf(s.ts)===t);let u=0,l=0;
  ts.forEach(s=>{u+=s.usd*s.qty;if(s.ccy==='SSP')l+=s.paid*s.qty});
@@ -185,20 +186,27 @@ $('add').onclick=async()=>{
 };
 function drawBasket(){$('bk').innerHTML=basket.map((l,i)=>'<div class="s"><div>'+esc(l.code)+' · '+f(l.qty)+' '+esc(l.unit).toLowerCase()+'<div class="mut">'+f(l.paid,l.ccy==='USD'?2:0)+' '+esc(l.ccy)+' each</div></div><button data-r="'+i+'">Remove</button></div>').join('')||'<div class="mut">Basket is empty.</div>';$('done').hidden=!basket.length;if(cur)refresh()}
 $('bk').onclick=e=>{const i=e.target.dataset.r;if(i!==undefined){resetPending();basket.splice(+i,1);drawBasket()}};
-function rtext(no,d,L){const W=32,line='-'.repeat(W),A=s=>String(s).normalize('NFKD').replace(/[^\x20-\x7e]/g,''),c=t=>' '.repeat(Math.max(0,(W-t.length)>>1))+t,r2=(a,b)=>{a=A(a);b=A(b);return a+' '.repeat(Math.max(1,W-a.length-b.length))+b};
- const o=[c('DAIMALA ENTERPRISE'),c('Konyo-Konyo, Juba'),c('+211925252434'),c('+211925208814'),line,r2('Receipt '+no,d),A('Seller: '+(me.name)),line];let u=0,s=0;
+function showRcpt(t){txt=t;const b=btoa(txt);$('raw').href='rawbt:base64,'+b;$('rawA').href='intent:base64,'+b+'#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
+ say('If the RawBT buttons do nothing, tap Save receipt file or Copy receipt text, then print from the RawBT app.');$('rt').textContent=txt;$('rcard').hidden=false;$('rcard').scrollIntoView()}
+const RETURNS='Original receipt must be presented for any exchange or warranty claim.';
+function wrap(t,W=32){const o=[];let l='';t.split(' ').forEach(w=>{if((l+' '+w).trim().length>W){o.push(l);l=w}else l=(l+' '+w).trim()});if(l)o.push(l);return o}
+function rtext(no,d,L,opt){opt=opt||{};const W=32,line='-'.repeat(W),A=s=>String(s).normalize('NFKD').replace(/[^\x20-\x7e]/g,''),c=t=>' '.repeat(Math.max(0,(W-t.length)>>1))+t,r2=(a,b)=>{a=A(a);b=A(b);return a+' '.repeat(Math.max(1,W-a.length-b.length))+b};
+ const o=[c('DAIMALA ENTERPRISE'),c('Konyo-Konyo, Juba'),c('+211925252434'),c('+211925208814'),c('daimalaenterprise7@gmail.com'),line,r2('Receipt '+no,d),A('Seller: '+(opt.seller||me.label)),line];if(opt.copy)o.splice(o.length-1,0,c('*** COPY - REPRINT ***'));let u=0,s=0;
  L.forEach(l=>{o.push(A(l.name).slice(0,W));const t=l.paid*l.qty,k=l.ccy==='USD'?2:0;if(l.ccy==='USD')u+=t;else s+=t;o.push(r2(f(l.qty)+' '+l.unit.toLowerCase()+' x '+f(l.paid,k),f(t,k)+' '+l.ccy))});
- o.push(line);if(u)o.push(r2('TOTAL USD',f(u)));if(s)o.push(r2('TOTAL SSP',f(s,0)));o.push(line,c('Thank you for shopping with us'),'','','');return o.join('\n')}
-function newNo(d){const n=new Date(),p=x=>String(x).padStart(2,'0');return d.slice(2).replace(/-/g,'')+'-'+p(n.getHours())+p(n.getMinutes())+p(n.getSeconds())+Math.random().toString(36).slice(2,4).toUpperCase()}
+ o.push(line);if(u)o.push(r2('TOTAL USD',f(u)));if(s)o.push(r2('TOTAL SSP',f(s,0)));o.push(line,c('Thank you for shopping with us'),line);wrap(RETURNS).forEach(t=>o.push(c(t)));if(opt.copy){const n=new Date(),p=x=>String(x).padStart(2,'0');o.push(line,c('*** COPY - REPRINT ***'),c('Reprinted '+n.getFullYear()+'-'+p(n.getMonth()+1)+'-'+p(n.getDate())+' '+p(n.getHours())+':'+p(n.getMinutes())),c('by '+A(me.label)))}o.push('','','');return o.join('\n')}
+async function nextNo(d){const base=d.slice(2).replace(/-/g,'');
+ try{const ref=db.doc('counters/'+d);
+  const n=await Promise.race([db.runTransaction(async t=>{const x=await t.get(ref),k=(x.exists?x.data().n:0)+1;t.set(ref,{n:k});return k}),new Promise((_,j)=>setTimeout(()=>j(0),5000))]);
+  return base+'-'+String(n).padStart(3,'0')}
+ catch(e){let k=1;try{k=(+localStorage.getItem('tmp'+d)||0)+1;localStorage.setItem('tmp'+d,k)}catch(x){k=Math.floor(Date.now()/1000)%100}
+  return base+'-T'+(me.label[0]||'X').toUpperCase()+String(k).padStart(2,'0')}}
 function resetPending(){if(pending){pending.ids.forEach(id=>db.doc('sales/'+id).delete().catch(()=>{}));pending=null}}
 $('done').onclick=async()=>{if(!basket.length)return;$('done').disabled=true;$('err').textContent='';
  const d=$('date').value||today();
- if(!pending||pending.d!==d){const no=newNo(d);pending={no,d,ts:Date.now(),ids:basket.map((_,i)=>no+'_'+i)}}
+ if(!pending||pending.d!==d){const no=await nextNo(d),bid='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);pending={no,d,ts:Date.now(),ids:basket.map((_,i)=>bid+'_'+i)}}
  const L=basket.slice(),P=pending;
- try{L.forEach((l,i)=>db.doc('sales/'+P.ids[i]).set({...l,date:d,rcpt:P.no,by:me.name,uid:me.uid,ts:P.ts+i}).catch(()=>{$('err').textContent='A sale line was rejected by the server. Check sign-in and rules.'}));
-  basket=[];pending=null;drawBasket();txt=rtext(P.no,d,L);
-  const b=btoa(txt);$('raw').href='rawbt:base64,'+b;$('rawA').href='intent:base64,'+b+'#Intent;scheme=rawbt;package=ru.a402d.rawbtprinter;end;';
-  say('If the RawBT buttons do nothing, tap Save receipt file or Copy receipt text, then print from the RawBT app.');$('rt').textContent=txt;$('rcard').hidden=false;$('rcard').scrollIntoView()}
+ try{L.forEach((l,i)=>db.doc('sales/'+P.ids[i]).set({...l,date:d,rcpt:P.no,by:me.name,sn:me.label,uid:me.uid,ts:P.ts+i}).catch(()=>{$('err').textContent='A sale line was rejected by the server. Check sign-in and rules.'}));
+  basket=[];pending=null;drawBasket();showRcpt(rtext(P.no,d,L,{seller:me.label}))}
  catch(e){$('err').textContent='Could not save the whole sale. Nothing was duplicated: tap Complete again to retry.'}
  $('done').disabled=false};
 const copy=async()=>{try{await navigator.clipboard.writeText(txt);say('Receipt text copied.')}catch(e){const r=document.createRange();r.selectNodeContents($('rt'));const g=getSelection();g.removeAllRanges();g.addRange(r);say('Copy not allowed here. Receipt text is selected: long-press and Copy.')}};
@@ -215,8 +223,8 @@ $('exp').onclick=async()=>{
  try{saveFile('daimala_sales_'+today()+'.csv',csv);return}catch(e){}
  $('out').hidden=false;$('out').value=csv;$('out').select();
 };
-db.collection('staff').onSnapshot(q=>{$('sl').innerHTML=q.docs.map(d=>'<div class="s"><div>'+esc(d.id)+'</div><button data-st="'+esc(d.id)+'">Remove</button></div>').join('')||'<div class="mut">No sellers yet.</div>'},()=>{});
-$('sa').onclick=()=>{const v=$('se').value.trim().toLowerCase(),e=$('serr');if(!/^\S+@\S+\.\S+$/.test(v))return e.textContent='Enter a valid email.';e.textContent='';db.doc('staff/'+v).set({role:'seller',by:me.name,ts:Date.now()}).then(()=>{$('se').value=''}).catch(()=>{e.textContent='Could not save.'})};
+db.collection('staff').onSnapshot(q=>{$('sl').innerHTML=q.docs.map(d=>'<div class="s"><div>'+esc(d.data().name||'')+'<div class="mut">'+esc(d.id)+'</div></div><button data-st="'+esc(d.id)+'">Remove</button></div>').join('')||'<div class="mut">No sellers yet.</div>'},()=>{});
+$('sa').onclick=()=>{const v=$('se').value.trim().toLowerCase(),e=$('serr');if(!/^\S+@\S+\.\S+$/.test(v))return e.textContent='Enter a valid email.';e.textContent='';db.doc('staff/'+v).set({role:'seller',name:$('sn').value.trim(),by:me.name,ts:Date.now()}).then(()=>{$('se').value='';$('sn').value=''}).catch(()=>{e.textContent='Could not save.'})};
 $('sl').onclick=e=>{const id=e.target.dataset.st;if(id&&confirm('Remove '+id+'? They will no longer be able to use the app.'))db.doc('staff/'+id).delete().catch(()=>{$('serr').textContent='Could not remove.'})};
 let disc=10;
 db.doc('settings/limits').onSnapshot(d=>{const x=d.data();if(x&&x.disc>=0)disc=+x.disc;if(document.activeElement!==$('dl'))$('dl').value=disc},()=>{});
@@ -268,6 +276,14 @@ $('lfill').onclick=()=>{const {span,v}=lowInfo(),o={};Object.values(items).forEa
  if(!n){$('lmsg').textContent='No items need a level filled in.';return}
  if(!confirm('Set reorder levels for '+n+' items that have none, using two weeks of their recent selling speed?'))return;
  db.doc('costs/items').set({costs:o},{merge:true}).then(()=>{$('lmsg').textContent='Set levels for '+n+' items.'}).catch(()=>{$('lmsg').textContent='Could not save.'})};
+const cap=b=>String(b||'').replace(/^./,c=>c.toUpperCase());
+function drawPl(){const t=today(),g={};sales.filter(x=>x.date===t&&x.rcpt).forEach(x=>(g[x.rcpt]=g[x.rcpt]||[]).push(x));
+ const G=Object.entries(g).map(([k,v])=>({no:k,v,ts:Math.max(...v.map(x=>x.ts||0))})).sort((a,b)=>b.ts-a.ts).slice(0,10);
+ $('pl').innerHTML=G.map(x=>'<div class="s"><div>'+esc(x.no)+'<div class="mut">'+x.v.length+' item'+(x.v.length>1?'s':'')+' · '+esc(x.v[0].sn||cap(x.v[0].by))+'</div></div><button data-rp="'+esc(x.no)+'" style="color:var(--ac)">Reprint</button></div>').join('')||'<div class="mut">No receipts yet today.</div>'}
+function reprint(no){const v=sales.filter(x=>x.rcpt===no).sort((a,b)=>a.ts-b.ts);if(!v.length){$('pm').textContent='No receipt found with that number.';return}
+ $('pm').textContent='';showTab('sell');showRcpt(rtext(no,v[0].date,v,{copy:1,seller:v[0].sn||(v[0].by===OWNER.split('@')[0]?'Emmanuel':cap(v[0].by))}))}
+$('pl').onclick=e=>{const n=e.target.dataset.rp;if(n)reprint(n)};
+$('pf').onclick=()=>reprint($('pn').value.trim().toUpperCase());
 const mfind=()=>{const v=$('mi').value.trim().toLowerCase();return items[Object.keys(items).find(c=>c.toLowerCase()===v||(c+' | '+items[c].name).toLowerCase()===v)]||null};
 function mhint(){const it=mfind();$('mh').textContent=it?'In stock: '+f((it.stock-sold(it.code))/it.F,2)+' cartons ('+f(it.stock-sold(it.code),0)+' pieces)':''}
 $('mi').addEventListener('input',mhint);
