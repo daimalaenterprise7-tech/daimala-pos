@@ -4,9 +4,9 @@
 <title>Daimala Sales Entry</title>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
-:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6a64;--ac:#0f6e56;--acx:#fff;--bd:#d9d7cf;--bad:#b3261e;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171715;--card:#22221f;--tx:#eeede8;--mut:#a09f97;--ac:#3fb593;--acx:#0b1f19;--bd:#3a3a35;--bad:#f2867f}}
-:root[data-theme="dark"]{--bg:#171715;--card:#22221f;--tx:#eeede8;--mut:#a09f97;--ac:#3fb593;--acx:#0b1f19;--bd:#3a3a35;--bad:#f2867f}
+:root{--bg:#f4f5f8;--card:#fff;--tx:#393a3d;--mut:#6b6c72;--ac:#2ca01c;--acx:#fff;--bd:#d4d7dc;--bad:#d52b1e;--side:#393a3d;--hov:#108000;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1d1f;--card:#2a2b2e;--tx:#eceded;--mut:#a3a5aa;--ac:#36b526;--acx:#0b1a08;--bd:#43454a;--bad:#f2867f;--side:#111214;--hov:#2ca01c}}
+:root[data-theme="dark"]{--bg:#1c1d1f;--card:#2a2b2e;--tx:#eceded;--mut:#a3a5aa;--ac:#36b526;--acx:#0b1a08;--bd:#43454a;--bad:#f2867f;--side:#111214;--hov:#2ca01c}
 *{box-sizing:border-box}html{color-scheme:light dark}
 body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;padding:12px}
 main{max-width:640px;margin:0 auto}h1{font-size:20px;margin:4px 0 12px}
@@ -21,17 +21,51 @@ button.sec{background:transparent;color:var(--tx);border:1px solid var(--bd)}
 .s button{width:auto;margin:0;padding:4px 10px;background:transparent;color:var(--bad);border:1px solid var(--bd)}
 .btn{display:block;text-align:center;text-decoration:none;background:var(--ac);color:var(--acx);font-weight:600;padding:10px;border-radius:8px;margin-top:12px}.btn.sec{background:transparent;color:var(--tx);border:1px solid var(--bd)}
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}td,th{padding:4px 6px;border-top:1px solid var(--bd);text-align:right;white-space:nowrap}td:first-child,th:first-child{text-align:left}
+[hidden]{display:none!important}
+[data-t]{display:none}[data-t].on{display:block}
+body{padding-bottom:88px}
+.card.fold>.big:first-child{cursor:pointer}.card.fold>.big:first-child::after{content:" ▾";color:var(--mut)}.card.fold.open>.big:first-child::after{content:" ▴"}
+.card.fold:not(.open)>:not(.big:first-child){display:none}
+#nav{position:fixed;left:0;right:0;bottom:0;display:flex;gap:2px;background:var(--card);border-top:1px solid var(--bd);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));z-index:5}
+#nav button{flex:1;width:auto;margin:0;padding:10px 2px;font-size:13px;background:transparent;color:var(--mut);border-radius:8px}
+#nav button.cur{background:var(--bg);color:var(--ac)}
 body.seller .adm,body.seller button[data-o="0"]{display:none!important}
+
+/* Theme: green, charcoal, light grey, pill buttons, sidebar on wide screens */
+h1{background:var(--side);color:#fff;margin:-12px -12px 12px;padding:14px 16px;font-size:18px;font-weight:700;letter-spacing:.2px}
+.card{border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.big{color:var(--tx)}
+input,select{border-radius:4px;border:1px solid #babec5;background:var(--card)}
+input:focus,select:focus{outline:2px solid var(--ac);outline-offset:0;border-color:var(--ac)}
+button{border-radius:999px;transition:background .15s}
+button:hover{background:var(--hov)}
+button.sec{background:transparent;color:var(--tx);border:1px solid #babec5}button.sec:hover{background:var(--bg)}
+.s button{border-radius:999px}.s button:hover{background:transparent}
+th{font-weight:600;color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.3px}
+tr:nth-child(even) td{background:rgba(0,0,0,.025)}
+#nav{border-top:2px solid var(--ac)}#nav button:hover{background:var(--bg)}
+#nav button.cur{background:transparent;color:var(--ac);box-shadow:inset 0 3px 0 var(--ac);border-radius:0 0 8px 8px}
+@media (min-width:900px){
+ body{padding:12px 12px 12px 224px}
+ h1{background:none;color:var(--tx);margin:4px 0 12px;padding:0;font-size:22px}
+ main{max-width:880px}
+ #nav{top:0;right:auto;bottom:0;width:208px;flex-direction:column;gap:4px;padding:16px 10px;background:var(--side);border:0}
+ #nav::before{content:"Daimala";color:#fff;font-size:22px;font-weight:700;padding:6px 14px 18px}
+ #nav button{color:#e7e8ea;text-align:left;padding:12px 14px;font-size:15px;border-radius:6px;flex:none}
+ #nav button:hover{background:rgba(255,255,255,.1)}
+ #nav button.cur{background:var(--ac);color:#fff;box-shadow:none;border-radius:6px}
+}
 </style></head><body><main>
 <h1>Daimala Sales Entry</h1>
 <div id="login" class="card" hidden><div class="big">Sign in</div><label>Email</label><input id="em" type="email" autocomplete="username"><label>Password</label><input id="pw" type="password" autocomplete="current-password"><button id="si">Sign in</button><div id="lerr" class="bad"></div></div>
 <div id="msg" class="card mut">Loading…</div>
 <div id="app" hidden>
+<nav id="nav"><button data-go="sell">Sell</button><button data-go="today">Today</button><button class="adm" data-go="stock">Stock</button><button class="adm" data-go="rep">Reports</button><button class="adm" data-go="set">Setup</button></nav>
 <div class="mut"><span id="who"></span> · <a href="#" id="so">Sign out</a></div>
-<div class="card"><label>Today’s rate (SSP per $1)</label>
+<div data-t="sell" class="card"><label>Today’s rate (SSP per $1)</label>
 <div class="row"><input id="rate" type="number" inputmode="decimal" min="0" step="any" placeholder="e.g. enter today’s rate"><button id="saveRate" style="margin:0;flex:0 0 90px">Save</button></div>
 <div class="mut" id="rateInfo"></div></div>
-<div class="card">
+<div data-t="sell" class="card">
 <label>Date</label><input id="date" type="date">
 <label>Item (type a code or name)</label><input id="item" list="items" autocomplete="off" placeholder="e.g. D1-12">
 <datalist id="items"></datalist>
@@ -43,13 +77,13 @@ body.seller .adm,body.seller button[data-o="0"]{display:none!important}
 <div class="mut" id="std"></div>
 <div class="big" id="tot"></div>
 <button id="add">Add to basket</button><div id="err" class="bad"></div></div>
-<div class="card"><div class="big">Basket</div><div id="bk"></div><button id="done" hidden>Complete sale &amp; make receipt</button></div>
-<div class="card" id="rcard" hidden><div class="big">Receipt</div><pre id="rt" style="font:13px/1.25 ui-monospace,Menlo,monospace;white-space:pre;overflow-x:auto"></pre>
+<div data-t="sell" class="card"><div class="big">Basket</div><div id="bk"></div><button id="done" hidden>Complete sale &amp; make receipt</button></div>
+<div data-t="sell" class="card" id="rcard" hidden><div class="big">Receipt</div><pre id="rt" style="font:13px/1.25 ui-monospace,Menlo,monospace;white-space:pre;overflow-x:auto"></pre>
 <a id="raw" class="btn" href="#">Print with RawBT</a><a id="rawA" class="btn sec" href="#">Print with RawBT (alternate link)</a><button class="sec" id="sv">Save receipt file (.txt)</button><button class="sec" id="shr">Share / send to printer app</button><button class="sec" id="cpy">Copy receipt text</button><div id="rmsg" class="mut"></div></div>
-<div class="card"><div class="big">Sales entered today</div><div class="mut" id="sum"></div><div id="list"></div>
+<div data-t="today" class="card"><div class="big">Sales entered today</div><div class="mut" id="sum"></div><div id="list"></div>
 <button class="sec" id="exp">Export all sales (CSV)</button><textarea id="out" hidden readonly style="width:100%;height:120px;margin-top:8px"></textarea></div>
-<div class="card adm"><div class="big">Staff (admin)</div><div class="mut">First add the person in Firebase: Authentication, Users, Add user. Then enter the same email here to approve them as a seller.</div><input id="se" type="email" placeholder="seller@email.com"><button id="sa">Approve seller</button><div id="sl"></div><div id="serr" class="bad"></div></div>
-<div class="card adm"><div class="big">Items &amp; prices (admin)</div>
+<div data-t="set" class="card adm fold open"><div class="big">Staff (admin)</div><div class="mut">First add the person in Firebase: Authentication, Users, Add user. Then enter the same email here to approve them as a seller.</div><input id="se" type="email" placeholder="seller@email.com"><button id="sa">Approve seller</button><div id="sl"></div><div id="serr" class="bad"></div></div>
+<div data-t="stock" class="card adm fold"><div class="big">Items &amp; prices (admin)</div>
 <label>Discount limit: a reason is required below this (%)</label><div class="row"><input id="dl" type="number" inputmode="decimal" min="0" max="100" step="any"><button id="dls" style="margin:0;flex:0 0 90px">Save</button></div>
 <label>Item: pick one to edit, or type a new code</label><input id="ei" list="items" autocomplete="off"><div id="eh" class="mut"></div>
 <label>Name</label><input id="en"><label>Category</label><input id="ec" list="cats"><datalist id="cats"></datalist>
@@ -58,7 +92,7 @@ body.seller .adm,body.seller button[data-o="0"]{display:none!important}
 <div class="row"><div><label>Price per piece ($)</label><input id="epp" type="number" step="any" min="0"></div><div><label>Cost per piece ($)</label><input id="ecost" type="number" step="any" min="0"></div></div>
 <label>Reorder level (pieces)</label><input id="erl" type="number" step="any" min="0">
 <button id="es">Save item</button><div id="eerr" class="bad"></div></div>
-<div class="card adm"><div class="big">Stock in / out (admin)</div>
+<div data-t="stock" class="card adm fold open"><div class="big">Stock in / out (admin)</div>
 <label>Item (type a code or name)</label><input id="mi" list="items" autocomplete="off">
 <div id="mh" class="mut"></div>
 <div class="row"><div><label>Type</label><select id="mt"><option value="in">Received (add stock)</option><option value="out">Remove (damaged, lost, other)</option><option value="count">Stock count (set stock to this)</option></select></div>
@@ -67,19 +101,19 @@ body.seller .adm,body.seller button[data-o="0"]{display:none!important}
 <label>Note (optional)</label><input id="mn" placeholder="e.g. container 3, or damaged in transit">
 <button id="ms">Save stock entry</button><div id="merr" class="bad"></div>
 <div class="big" style="margin-top:12px">Recent entries</div><div id="ml"></div></div>
-<div class="card adm"><div class="big">Count sheet (admin)</div>
+<div data-t="stock" class="card adm fold"><div class="big">Count sheet (admin)</div>
 <div class="mut">Count the shelf and enter what you counted. Leave an item blank if you did not count it. Review shows only the differences. Count while no sales are being made.</div>
 <div class="row"><div><label>Category</label><select id="ccat"></select></div><div><label>Counting in</label><select id="cu"><option>Piece</option><option>Dozen</option><option>Carton</option></select></div></div>
 <input id="cq" placeholder="Search code or name"><div id="cs"></div>
 <button id="cr">Review differences</button><div id="cres"></div><button id="ca" hidden>Apply these adjustments</button><div id="cerr" class="bad"></div></div>
-<div class="card adm"><div class="big">Reorder list (admin)</div>
+<div data-t="stock" class="card adm fold"><div class="big">Reorder list (admin)</div>
 <div class="mut" id="lowinfo"></div>
 <div class="row"><div><label>Order enough to cover (days)</label><input id="cd" type="number" min="1" value="30"></div></div>
 <div id="low" style="overflow-x:auto"></div>
 <button class="sec" id="lcsv" hidden>Download reorder list (CSV)</button>
 <button class="sec" id="lfill">Fill empty reorder levels from sales (14 days)</button><div id="lmsg" class="mut"></div></div>
-<div class="card adm"><div class="big">Reports (admin)</div><div class="row"><div><label>From</label><input id="r1" type="date"></div><div><label>To</label><input id="r2" type="date"></div></div><button id="rr">Show report</button><div id="rep" style="overflow-x:auto"></div><button class="sec" id="rcsv" hidden>Download daily report (CSV)</button></div>
-<div class="card adm"><div class="big">Admin: import data</div><div class="mut">catalog.json replaces the item list and sets stock from the file. costs.json adds cost prices for profit reports.</div><input id="imp" type="file" accept=".json,application/json"><div id="impm" class="mut"></div></div>
+<div data-t="rep" class="card adm"><div class="big">Reports (admin)</div><div class="row"><div><label>From</label><input id="r1" type="date"></div><div><label>To</label><input id="r2" type="date"></div></div><button id="rr">Show report</button><div id="rep" style="overflow-x:auto"></div><button class="sec" id="rcsv" hidden>Download daily report (CSV)</button></div>
+<div data-t="set" class="card adm fold"><div class="big">Admin: import data</div><div class="mut">catalog.json replaces the item list and sets stock from the file. costs.json adds cost prices for profit reports.</div><input id="imp" type="file" accept=".json,application/json"><div id="impm" class="mut"></div></div>
 </div>
 <script>
 const $=id=>document.getElementById(id),msg=$('msg');
@@ -88,6 +122,10 @@ firebase.initializeApp(firebaseConfig);
 const auth=firebase.auth(),db=firebase.firestore();
 try{db.enablePersistence({synchronizeTabs:true}).catch(()=>{})}catch(e){}
 let started=false,me=null;
+function showTab(t){document.querySelectorAll('[data-t]').forEach(e=>e.classList.toggle('on',e.dataset.t===t));document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('cur',b.dataset.go===t));window.scrollTo(0,0)}
+$('nav').addEventListener('click',e=>{const g=e.target.dataset.go;if(g)showTab(g)});
+$('app').addEventListener('click',e=>{const h=e.target.closest('.big'),c=h&&h.parentElement;if(c&&c.classList.contains('fold')&&h===c.firstElementChild)c.classList.toggle('open')});
+
 $('si').onclick=async()=>{$('lerr').textContent='';try{await auth.signInWithEmailAndPassword($('em').value.trim(),$('pw').value)}catch(e){$('lerr').textContent='Sign-in failed ('+(e.code||'error')+'). Check email and password.'}};
 $('so').onclick=e=>{e.preventDefault();auth.signOut()};
 const OWNER='soroemmanuel199@gmail.com';
@@ -96,7 +134,7 @@ auth.onAuthStateChanged(async u=>{msg.hidden=true;if(!u){$('app').hidden=true;$(
  if(!ok){try{ok=(await db.doc('staff/'+em).get()).exists}catch(e){ok=false}}
  if(!ok){$('app').hidden=true;$('login').hidden=false;$('lerr').textContent='This account is not approved. Ask the owner to add you.';auth.signOut();return}
  me={name:em.split('@')[0],uid:u.uid};document.body.classList.toggle('seller',em!==OWNER);
- $('who').textContent='Signed in as '+u.email+(em===OWNER?' (admin)':' (seller)');$('login').hidden=true;$('app').hidden=false;if(!started){started=true;start()}});
+ $('who').textContent='Signed in as '+u.email+(em===OWNER?' (admin)':' (seller)');$('login').hidden=true;$('app').hidden=false;showTab('sell');if(!started){started=true;start()}});
 function saveFile(n,t){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([t],{type:'text/plain'}));a.download=n;document.body.appendChild(a);a.click();a.remove()}
 function start(){
 let items={},sales=[],moves=[],rate=0,cur=null,asOf=0,basket=[],txt='',pending=null,touched=false;
